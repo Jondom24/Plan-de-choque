@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Home - Institución Miguel de Cervantes</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url("https://aptus.com.ar/wp-content/uploads/2022/06/Dia-de-los-Jardines.jpg"); 
+      background-size: cover; 
+      background-position: center; 
+      background-repeat: no-repeat;
+      margin: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #004aad;
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    header h1 {
+      margin: 0;
+    }
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    button.logout, button.tasks-btn {
+      border: none;
+      padding: 10px;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+    button.logout {
+      background-color: #f44336;
+    }
+    button.tasks-btn {
+      background-color: #3498db;
+    }
+    .announcement {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+    .announcement h3 {
+      margin: 0 0 10px;
+    }
+    .announcement p {
+      margin: 0 0 10px;
+    }
+    .announcement small {
+      color: #999;
+    }
+    .announcement img {
+      max-width: 500px;
+      height: auto;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bienvenido a la Institución Miguel de Cervantes</h1>
+    <div class="header-buttons">
+      <button class="tasks-btn" id="tasksButton">Ver Tareas</button>
+      <button class="logout" id="logoutButton">Cerrar Sesión</button>
+    </div>
+  </header>
+  <section>
+    <h2>Anuncios</h2>
+    <div id="announcements">
+      <!-- Se cargarán los anuncios aquí -->
+    </div>
+  </section>
+  <script>
+    // Función para cerrar sesión
+    document.getElementById('logoutButton').addEventListener('click', function() {
+      fetch('/api/logout')
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          window.location.href = '/index.html';
+        })
+        .catch(error => console.error('Error al cerrar sesión:', error));
+    });
+
+    // Botón para ir a tasks.html
+    document.getElementById('tasksButton').addEventListener('click', function() {
+      window.location.href = '/tasks.html';
+    });
+
+    // Función para cargar anuncios
+    function loadAnnouncements() {
+      fetch('/api/announcements')
+        .then(response => response.json())
+        .then(data => {
+          const container = document.getElementById('announcements');
+          container.innerHTML = '';
+          if (Array.isArray(data) && data.length > 0) {
+            data.forEach(announcement => {
+              const div = document.createElement('div');
+              div.className = 'announcement';
+              let imageHTML = '';
+              if (announcement.image && announcement.image.trim() !== '') {
+                imageHTML = `<img src="${announcement.image}" alt="Imagen del anuncio">`;
+              }
+              div.innerHTML = `<h3>${announcement.title}</h3>
+                               <p>${announcement.content}</p>
+                               ${imageHTML}
+                               <small>Publicado: ${announcement.created_at}</small>`;
+              container.appendChild(div);
+            });
+          } else {
+            container.innerHTML = '<p>No hay anuncios disponibles.</p>';
+          }
+        })
+        .catch(error => console.error('Error al cargar anuncios:', error));
+    }
+
+    loadAnnouncements();
+  </script>
+</body>
+</html>

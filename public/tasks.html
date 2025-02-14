@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tareas y Notas - Institución Miguel de Cervantes</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #d2fff1; margin: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; background-color: #004aad; color: #fff; padding: 10px; border-radius: 5px; }
+    header h1 { margin: 0; }
+    button.logout { background-color: #f44336; border: none; padding: 10px; color: #fff; cursor: pointer; border-radius: 3px; }
+    .section { background-color: #fff; border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+    .section h2 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Tareas y Notas</h1>
+    <button class="logout" id="logoutButton">Cerrar Sesión</button>
+  </header>
+  <div class="section">
+    <h2>Filtrar Tareas por Fecha</h2>
+    <input type="date" id="filterDate">
+    <button onclick="filterTasks()">Filtrar</button>
+    <button onclick="clearFilter()">Limpiar Filtro</button>
+  </div>
+  <div class="section">
+    <h2>Tareas</h2>
+    <div id="tasksContainer">
+      <!-- Se cargarán las tareas aquí -->
+    </div>
+  </div>
+  <div class="section">
+    <h2>Notas</h2>
+    <div id="notesContainer">
+      <!-- Se cargarán las notas aquí -->
+    </div>
+  </div>
+  <script>
+    document.getElementById('logoutButton').addEventListener('click', function() {
+      fetch('/api/logout', { credentials: 'include' })
+      .then(response => response.json())
+      .then(data => { alert(data.message); window.location.href = '/index.html'; })
+      .catch(error => console.error('Error al cerrar sesión:', error));
+    });
+    
+    function loadTasks(dateFilter = null) {
+      let url = '/api/tasks';
+      if (dateFilter) {
+        url += '?due_date=' + dateFilter;
+      }
+      fetch(url, { credentials: 'include' })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        const container = document.getElementById('tasksContainer');
+        container.innerHTML = '';
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(task => {
+            const div = document.createElement('div');
+            div.innerHTML = `<strong>${task.title}</strong><br>
+                             ${task.description}<br>
+                             <em>Fecha de entrega: ${task.due_date || 'N/A'}</em><br>
+                             <small>Creado: ${task.created_at}</small>`;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = '<p>No hay tareas disponibles.</p>';
+        }
+      })
+      .catch(error => console.error('Error al cargar tareas:', error));
+    }
+    
+    function loadNotes() {
+      fetch('/api/notes', { credentials: 'include' })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        const container = document.getElementById('notesContainer');
+        container.innerHTML = '';
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(note => {
+            const div = document.createElement('div');
+            div.innerHTML = `<strong>${note.title}</strong><br>
+                             ${note.description}<br>
+                             <em>ID del estudiante: ${note.student_id || 'N/A'}</em><br>
+                             <small>Subido: ${note.created_at}</small>`;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = '<p>No hay notas disponibles.</p>';
+        }
+      })
+      .catch(error => console.error('Error al cargar notas:', error));
+    }
+    
+    function filterTasks() {
+      const filterDate = document.getElementById('filterDate').value;
+      loadTasks(filterDate);
+    }
+    
+    function clearFilter() {
+      document.getElementById('filterDate').value = '';
+      loadTasks();
+    }
+    
+    loadTasks();
+    loadNotes();
+  </script>
+</body>
+</html>

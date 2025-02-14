@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sección de Profesor - Institución Miguel de Cervantes</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 0; }
+    header { background-color: #004aad; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 24px; }
+    header button { background-color: #f44336; border: none; color: #fff; padding: 10px 15px; font-size: 16px; border-radius: 3px; cursor: pointer; }
+    .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    section { margin-bottom: 30px; }
+    form { margin-bottom: 15px; }
+    label { display: block; margin: 5px 0; }
+    input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+    button { padding: 10px; background-color: #004aad; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+    .message { color: green; } .error { color: red; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sección de Profesor</h1>
+    <button id="logoutButton">Cerrar Sesión</button>
+  </header>
+  <div class="container">
+    <!-- Subir información de profesor (notas y trabajos) -->
+    <section id="teacherInfoSection">
+      <h2>Subir Información (Notas y Trabajos)</h2>
+      <form id="teacherInfoForm">
+        <label for="infoTitle">Título:</label>
+        <input type="text" id="infoTitle" name="infoTitle" required>
+        <label for="infoDescription">Descripción:</label>
+        <textarea id="infoDescription" name="infoDescription" rows="4" required></textarea>
+        <label for="infoType">Tipo:</label>
+        <select id="infoType" name="infoType">
+          <option value="nota">Nota</option>
+          <option value="trabajo">Próximo Trabajo</option>
+        </select>
+        <label for="studentId">ID del Estudiante (solo para nota, opcional):</label>
+        <input type="text" id="studentId" name="studentId" placeholder="Opcional">
+        <label for="dueDate">Fecha de Entrega (solo para trabajo, opcional):</label>
+        <input type="date" id="dueDate" name="dueDate">
+        <button type="submit">Subir Información</button>
+      </form>
+      <div id="teacherInfoMessage"></div>
+    </section>
+    <!-- Subir tarea -->
+    <section id="taskUploadSection">
+      <h2>Subir Tarea</h2>
+      <form id="taskForm">
+        <label for="taskTitle">Título de la Tarea:</label>
+        <input type="text" id="taskTitle" name="taskTitle" required>
+        <label for="taskDescription">Descripción:</label>
+        <textarea id="taskDescription" name="taskDescription" rows="4" required></textarea>
+        <label for="taskDueDate">Fecha de Entrega:</label>
+        <input type="date" id="taskDueDate" name="taskDueDate">
+        <button type="submit">Subir Tarea</button>
+      </form>
+      <div id="taskMessage"></div>
+    </section>
+  </div>
+  <script>
+    // Cerrar sesión
+    document.getElementById('logoutButton').addEventListener('click', function() {
+      fetch('/api/logout')
+      .then(response => response.json())
+      .then(data => { alert(data.message); window.location.href = '/index.html'; })
+      .catch(error => console.error('Error al cerrar sesión:', error));
+    });
+    // Subir información de profesor
+    document.getElementById('teacherInfoForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('infoTitle').value;
+      const description = document.getElementById('infoDescription').value;
+      const type = document.getElementById('infoType').value;
+      const student_id = document.getElementById('studentId').value;
+      const due_date = document.getElementById('dueDate').value;
+      fetch('/api/teacher_info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, type, student_id, due_date })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('teacherInfoMessage').innerHTML =
+          data.error ? `<p class="error">${data.error}</p>` : `<p class="message">${data.message}</p>`;
+        document.getElementById('teacherInfoForm').reset();
+      })
+      .catch(error => console.error('Error al subir información:', error));
+    });
+    // Subir tarea (solo profesores)
+    document.getElementById('taskForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('taskTitle').value;
+      const description = document.getElementById('taskDescription').value;
+      const due_date = document.getElementById('taskDueDate').value;
+      fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, due_date })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('taskMessage').innerHTML =
+          data.error ? `<p class="error">${data.error}</p>` : `<p class="message">${data.message}</p>`;
+        document.getElementById('taskForm').reset();
+      })
+      .catch(error => console.error('Error al subir tarea:', error));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Administración - Institución Miguel de Cervantes</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 0; }
+    header { background-color: #004aad; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 24px; }
+    header button { background-color: #f44336; border: none; color: #fff; padding: 10px 15px; font-size: 16px; border-radius: 3px; cursor: pointer; }
+    .container { max-width: 800px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    section { margin-bottom: 30px; }
+    form { margin-bottom: 15px; }
+    label { display: block; margin: 5px 0; }
+    input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+    button { padding: 10px; background-color: #004aad; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+    .message { color: green; } .error { color: red; }
+    .announcement-item, .user-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
+    .user-item span { display: inline-block; margin-right: 10px; }
+    .delete-btn, .edit-btn { background-color: #e74c3c; color: #fff; border: none; padding: 5px; border-radius: 3px; cursor: pointer; margin-left: 5px; }
+    .edit-btn { background-color: #3498db; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Panel de Administración</h1>
+    <button id="logoutButton">Cerrar Sesión</button>
+  </header>
+  <div class="container">
+    <!-- Publicar anuncio -->
+    <section id="announcementSection">
+      <h2>Publicar Nuevo Anuncio</h2>
+      <form id="announcementForm">
+        <label for="title">Título:</label>
+        <input type="text" id="title" name="title" required>
+        <label for="content">Contenido:</label>
+        <textarea id="content" name="content" rows="4" required></textarea>
+        <label for="image">URL de la Imagen (opcional):</label>
+        <input type="text" id="image" name="image" placeholder="http://ejemplo.com/imagen.jpg">
+        <button type="submit">Publicar Anuncio</button>
+      </form>
+      <div id="announcementMessage"></div>
+      <h3>Anuncios Publicados</h3>
+      <div id="announcementsContainer"></div>
+    </section>
+    <!-- Registrar usuario -->
+    <section id="userRegistration">
+      <h2>Registrar Nuevo Usuario</h2>
+      <form id="registrationForm">
+        <label for="regUsername">Nombre de Usuario:</label>
+        <input type="text" id="regUsername" name="regUsername" required>
+        <label for="regPassword">Contraseña:</label>
+        <input type="password" id="regPassword" name="regPassword" required>
+        <label for="regRole">Rol:</label>
+        <select id="regRole" name="regRole">
+          <option value="estudiante">Estudiante</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <button type="submit">Registrar Usuario</button>
+      </form>
+      <div id="registrationMessage"></div>
+    </section>
+    <!-- Listado de usuarios -->
+    <section id="listUsers">
+      <h2>Listado de Usuarios</h2>
+      <div id="usersContainer"></div>
+    </section>
+  </div>
+  <script>
+    // Cerrar sesión
+    document.getElementById('logoutButton').addEventListener('click', function() {
+      fetch('/api/logout')
+        .then(response => response.json())
+        .then(data => { alert(data.message); window.location.href = '/index.html'; })
+        .catch(error => console.error('Error al cerrar sesión:', error));
+    });
+    // Publicar anuncio
+    document.getElementById('announcementForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const content = document.getElementById('content').value;
+      const image = document.getElementById('image').value;
+      fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content, image })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('announcementMessage').innerHTML =
+          data.error ? `<p class="error">${data.error}</p>` : `<p class="message">${data.message}</p>`;
+        document.getElementById('announcementForm').reset();
+        loadAnnouncements();
+      })
+      .catch(error => console.error('Error al publicar anuncio:', error));
+    });
+    // Función para cargar anuncios con opción de editar y borrar
+    function loadAnnouncements() {
+      fetch('/api/announcements')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('announcementsContainer');
+        container.innerHTML = '';
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(announcement => {
+            const div = document.createElement('div');
+            div.className = 'announcement-item';
+            let imageHTML = '';
+            if (announcement.image) {
+              imageHTML = `<br><img src="${announcement.image}" alt="Imagen del anuncio" style="max-width:200px;">`;
+            }
+            div.innerHTML = `
+              <span><strong>ID:</strong> ${announcement.id}</span>
+              <span><strong>Título:</strong> ${announcement.title}</span>
+              <p>${announcement.content}</p>
+              ${imageHTML}
+              <small>Publicado: ${announcement.created_at}</small>
+              <button class="edit-btn" onclick="editAnnouncement(${announcement.id}, '${encodeURIComponent(announcement.title)}', '${encodeURIComponent(announcement.content)}', '${encodeURIComponent(announcement.image || "")}')">Editar</button>
+              <button class="delete-btn" onclick="deleteAnnouncement(${announcement.id})">Borrar</button>
+            `;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = '<p>No hay anuncios publicados.</p>';
+        }
+      })
+      .catch(error => console.error('Error al cargar anuncios:', error));
+    }
+    // Función para borrar anuncio (solo para administradores)
+    function deleteAnnouncement(id) {
+      if (confirm("¿Estás seguro de que deseas borrar este anuncio?")) {
+        fetch(`/api/announcements/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          loadAnnouncements();
+        })
+        .catch(error => {
+          console.error('Error al borrar anuncio:', error);
+          alert('Error al borrar el anuncio.');
+        });
+      }
+    }
+    // Función para editar anuncio (solo para administradores)
+    function editAnnouncement(id, encodedTitle, encodedContent, encodedImage) {
+      const currentTitle = decodeURIComponent(encodedTitle);
+      const currentContent = decodeURIComponent(encodedContent);
+      const currentImage = decodeURIComponent(encodedImage);
+      const newTitle = prompt("Ingrese el nuevo título:", currentTitle);
+      if (newTitle === null) return;
+      const newContent = prompt("Ingrese el nuevo contenido:", currentContent);
+      if (newContent === null) return;
+      const newImage = prompt("Ingrese la URL de la nueva imagen (dejar en blanco para eliminar):", currentImage);
+      fetch(`/api/announcements/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle, content: newContent, image: newImage })
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert(data.message);
+        loadAnnouncements();
+      })
+      .catch(error => {
+        console.error("Error al actualizar anuncio:", error);
+        alert("Error al actualizar anuncio.");
+      });
+    }
+    // Registrar nuevo usuario
+    document.getElementById('registrationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const regUsername = document.getElementById('regUsername').value;
+      const regPassword = document.getElementById('regPassword').value;
+      const regRole = document.getElementById('regRole').value;
+      fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: regUsername, password: regPassword, role: regRole })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('registrationMessage').innerHTML =
+          data.error ? `<p class="error">${data.error}</p>` : `<p class="message">${data.message}</p>`;
+        document.getElementById('registrationForm').reset();
+        loadUsers();
+      })
+      .catch(error => console.error('Error al registrar usuario:', error));
+    });
+    // Función para cargar la lista de usuarios
+    function loadUsers() {
+      fetch('/api/users')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('usersContainer');
+        container.innerHTML = '';
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'user-item';
+            div.innerHTML = `
+              <span><strong>ID:</strong> ${user.id}</span>
+              <span><strong>Usuario:</strong> ${user.username}</span>
+              <span><strong>Rol:</strong> ${user.role}</span>
+              <span><strong>Creado:</strong> ${user.created_at}</span>
+              <button class="delete-btn" onclick="deleteUser(${user.id})">Borrar</button>
+            `;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = '<p>No hay usuarios registrados.</p>';
+        }
+      })
+      .catch(error => console.error('Error al cargar usuarios:', error));
+    }
+    // Función para borrar un usuario
+    function deleteUser(id) {
+      if (confirm("¿Estás seguro de que deseas borrar este usuario?")) {
+        fetch(`/api/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          loadUsers();
+        })
+        .catch(error => {
+          console.error('Error al borrar usuario:', error);
+          alert('Error al borrar el usuario.');
+        });
+      }
+    }
+    // Cargar datos al iniciar
+    loadAnnouncements();
+    loadUsers();
+  </script>
+</body>
+</html>
